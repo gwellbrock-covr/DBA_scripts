@@ -1,0 +1,69 @@
+
+  CREATE TABLE #List
+        ( databasename sysname,
+          [CompanyName] VARCHAR(100) ,
+          FirstName VARCHAR(100) ,
+          LastName VARCHAR(100) ,
+          [Role] VARCHAR(100) ,
+          EMAIL VARCHAR(100) ,
+          [Status] VARCHAR(100)
+        );
+
+
+          -- run for each database
+     DECLARE @db_name VARCHAR(255);
+     DECLARE c CURSOR LOCAL FAST_FORWARD READ_ONLY
+     FOR
+        SELECT  name
+        FROM    sys.databases
+        WHERE   name LIKE 'xraeCommon%'
+                AND name NOT IN ( 'xraeCommonData', 'xraeDirectDev',
+                                  'xraeCommonBrokerage', 'xraeCommonBankers' );
+     OPEN c;
+     FETCH NEXT FROM c INTO @db_name;
+     WHILE @@fetch_status = 0
+        BEGIN
+            DECLARE @bodysql VARCHAR(MAX);
+             -- Disable search in all databases for carrier 28 (Nationwide)
+            SET @bodysql = ' 
+
+                      
+       INSERT INTO #List
+               ([databasename],CompanyName ,
+                             FirstName,
+                 LastName ,
+                 Role ,
+                 EMAIL ,
+                 Status
+               )
+                      
+             select ''///'', a.AccountName
+       ,au.FirstName, au.LastName, 
+                           CASE au.RoleCode
+                                 WHEN 0 THEN ''Admin''
+                                 WHEN 1 THEN ''Employee''
+                                 ELSE ''Agent''
+                           END AS [Role], 
+                     au.EmailAddress, 
+                           CASE au.StatusCode
+                                 WHEN 0 THEN ''Enabled''
+                                 ELSE ''Disabled''
+                           END AS [Status]
+                    FROM [///].dbo.AccountUsers au
+                                    left join [///].dbo.accounts a on a.accountid = au.accountid
+             WHERE au.EmailAddress = ''support@rolling-solutions.com''
+             '; 
+                    
+            SET @bodysql = REPLACE(@bodysql, '///', @db_name);
+                           
+            PRINT @bodysql;
+            EXECUTE (@bodysql);
+            FETCH NEXT FROM c INTO @db_name;
+        END;
+     CLOSE c;
+     DEALLOCATE c;
+
+
+     SELECT distinct *
+     FROM   #List
+       ;

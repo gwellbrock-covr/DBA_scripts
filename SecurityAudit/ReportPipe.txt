@@ -1,0 +1,10 @@
+
+  SELECT    u.NAME AS [LOGIN] ,
+            u.FIRST_NAME + ' ' + u.LAST_NAME ,
+            u.EMAIL AS Name ,
+            CASE WHEN u.INACTIVE_DATE > GETDATE() THEN 'X'
+                 ELSE ''
+            END AS [Enabled]
+  FROM      dbo.USER_GROUP ug
+            INNER JOIN dbo.USERS u ON u.ID = ug.USER_ID
+  WHERE     ug.GROUP_ID IN ( '105699', '105700' );
