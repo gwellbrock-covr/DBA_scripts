@@ -1,0 +1,58 @@
+SNOWFLAKE
+PRIMARY ANALYTICS/ DR FOR EXCHANGE
+https://covrtech.west-us-2.azure.snowflakecomputing.com/
+PRIMARY EXCHANGE / DR ANALYTICS
+https://covrtech.us-east-1.snowflakecomputing.com/
+
+DBT - ALL DATA MODELS
+
+getdbt.com
+
+https://gitlab.com/covrtech/CovrDbtAnalytics
+https://gitlab.com/covrtech/CovrDbtExchange
+
+FIVETRAN - Get's data into snowflake from...
+BMS - all data 
+COVRSERVICES - all data
+STRIPE 
+SHAREPOINT - Advisor stuff
+AZUREBLOBSTORAGE - Haven Files
+
+
+CENSUS - getcensus.com
+
+Moves Data Model from snowflake to Salesforce
+
+
+DATA EXTRACTS - 
+
+https://gitlab.com/covrtech/covrdataexchange/-/tree/main/data_extracts
+
+RUN AS SQL JOBS ON AZ-PRODSQL-01 10.210.2.10
+Leaders_group
+citi surveillance
+citi commissions
+etrade
+franklinmaddison
+americo
+lfg
+internal - consumer_agency, illustrations, operations
+
+
+Python Script - Didn't get time to create excel file conversion to lambda
+CITI COMMISSIONS/SURVEILLANCE - POWERSHELL 
+
+
+SNWOFLAKE EXAMPLE TO CREATE NEW CSV DROPS TO S3
+https://gitlab.com/covrtech/covrdataexchange/-/tree/main/snowflake/AutoReports_Aws/Citi
+
+
+AZURE AUTOMATION JOBS
+
+AZURE-->AUTOMATION ACCOUNTS-->COVRPRODAUTOACC
+
+REINDEX - SQL Maintenance jobs
+run_analytics_rollup - parses the events on oneclick event tracking to not create so much data into snowflake(was costing too much $$$ with bad data)
+territory_agent_update - this updates AGENTS in BMS with their current RIC/IW based on excel sheet DAWN maintains
+
+

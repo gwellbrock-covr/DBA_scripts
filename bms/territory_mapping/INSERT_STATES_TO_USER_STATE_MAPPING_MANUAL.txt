@@ -1,0 +1,22 @@
+DECLARE @statestring VARCHAR(MAX)
+    = 'CT,MA,ME,NH,RI,VT,AK,AZ,CO,HI,IA,ID,MN,MT,ND,NE,NM,NV,OR,SD,UT,WA,WI,WY,AL,FL,GA,KY,MS,NC,SC,TN,AR,IL,KS,LA,MO,OK,TX,DC,DE,IN,MD,MI,OH,PA,VA,WV,CA,NJ,NY';
+
+
+INSERT INTO dbo.UserStateMapping
+(
+    AgencyID,
+    UserID,
+    State
+)
+
+SELECT 4905,
+       557,
+       b.value
+FROM dbo.[User] u
+    CROSS APPLY STRING_SPLIT(@statestring, ',') b
+WHERE u.UserID = 557;
+
+
+SELECT * FROM 	dbo.[user] WHERE UserName LIKE '%chip%'
+
+RetireOne, Inc.	4905	CHIP HITCHCOCK	CT,MA,ME,NH,RI,VT,AK,AZ,CO,HI,IA,ID,MN,MT,ND,NE,NM,NV,OR,SD,UT,WA,WI,WY,AL,FL,GA,KY,MS,NC,SC,TN,AR,IL,KS,LA,MO,OK,TX,DC,DE,IN,MD,MI,OH,PA,VA,WV,CA,NJ,NY

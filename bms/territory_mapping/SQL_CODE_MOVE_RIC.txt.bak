@@ -1,0 +1,60 @@
+
+--declare variables
+
+DECLARE @OLDUSER INT = 523;
+DECLARE @NEWUSER INT = 586;
+
+--update state mapping
+
+UPDATE dbo.UserStateMapping
+SET UserID = @NEWUSER
+WHERE UserID = @OLDUSER;
+
+
+--move agents
+UPDATE Agent
+SET UserID = @NEWUSER
+WHERE UserID = @OLDUSER;
+
+
+--move pending cases
+UPDATE dbo.[Case]
+SET RepUserID = a.UserID
+FROM dbo.[Case] c
+    INNER JOIN dbo.Agent a
+        ON a.AgentID = c.AgentID
+    INNER JOIN dbo.CaseStatus cs
+        ON cs.CaseStatusID = c.CaseStatusID
+WHERE a.UserID = '@NEWUSER'
+      AND c.RepUserID <> '@NEWUSER'
+      AND c.RepUserID <> a.UserID
+      AND cs.StatusCategory IN ( 'Pending' );
+
+--move pending conciergecases
+UPDATE dbo.ConciergeCase
+SET AssignedUserID = a.UserID
+FROM dbo.ConciergeCase c
+    INNER JOIN dbo.Agent a
+        ON a.AgentID = c.AgentID
+    INNER JOIN dbo.ConciergeCaseStatus cs
+        ON cs.ConciergeCaseStatusID = c.ConciergeCaseStatusID
+WHERE a.UserID = '@NEWUSER'
+      AND c.RepUserID <> '@NEWUSER'
+      AND c.RepUserID <> a.UserID
+      AND cs.ConciergeCaseStatusCategory IN ( 'Pending' );
+
+
+--move presale
+UPDATE dbo.OneClickRequest
+SET AssignedToUserID = @NEWUSER
+WHERE AssignedToUserID = @OLDUSER
+      AND OneClickRequestStatusID IN ( 1, 2, 3 );
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,74 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Infrastructure and Network Resources for covr-exchange
+Parameters:
+  EnviromentName:
+    Type: String
+    Description: Name of enviroment(dev,qa,uat,prod)
+Resources:
+ MyDatabase:   
+      Type: AWS::DynamoDB::GlobalTable
+      DeletionPolicy: Retain
+      Properties:
+        TableName: !Sub exchange-data-${EnviromentName}
+        AttributeDefinitions:
+        - AttributeName: pk
+          AttributeType: S
+        - AttributeName: sk
+          AttributeType: S
+        - AttributeName: gs1pk
+          AttributeType: S
+        - AttributeName: gs1sk
+          AttributeType: S
+        KeySchema:
+        - AttributeName: pk
+          KeyType: HASH
+        - AttributeName: sk
+          KeyType: RANGE
+        GlobalSecondaryIndexes:
+          - IndexName: gs1
+            KeySchema:
+              - AttributeName: gs1pk
+                KeyType: HASH
+              - AttributeName: gs1sk
+                KeyType: RANGE
+            Projection:
+              ProjectionType: 'ALL'
+        BillingMode: PAY_PER_REQUEST
+        StreamSpecification:
+          StreamViewType: NEW_AND_OLD_IMAGES
+        SSESpecification:
+          SSEEnabled: true
+          SSEType: "KMS"
+        Replicas:
+          - Region: us-east-2
+          - Region: us-west-2
+
+        
+          
+          
+ MyBucket:
+    Type: 'AWS::S3::Bucket'
+    Properties: 
+      BucketName: !Sub exchange-data-${EnviromentName}
+      AccessControl: Private
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256     
+      NotificationConfiguration:
+        EventBridgeConfiguration:
+          EventBridgeEnabled: true
+Outputs:
+  exchangebucket:
+    Value:  !Ref MyBucket
+    Export:
+      Name: "exchangebucket"
+  exchangetable:
+    Value:  !Ref MyDatabase
+    Export:
+      Name: "exchangetable"

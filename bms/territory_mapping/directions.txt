@@ -1,0 +1,81 @@
+Steps
+
+1)	Dawn Sends Excel
+2)	Convert to .CSV
+3)	Upload as SQL table(Use whatever – I use ssms)
+4)	Run script replacing table with table uploaded at comment
+
+
+TRUNCATE TABLE UserStateMapping;
+
+
+INSERT INTO dbo.UserStateMapping
+(
+    AgencyID,
+    UserID,
+    State
+)
+SELECT ctm.AGENCYID,
+       u.UserID,
+       b.value
+FROM dbo.[User] u
+    JOIN [dbo].[_COVR_TERRITORY_MAPPING_10.21.2022] ctm --REPLACE WITH TABLE UPLOADED
+        ON ctm.NAME = UPPER(u.FirstName) + ' ' + UPPER(u.LastName)
+    CROSS APPLY STRING_SPLIT(STATES, ',') b;
+
+
+
+BEGIN TRAN;
+UPDATE dbo.Agent
+SET UserID = usm.UserID
+FROM dbo.Agent a
+    JOIN dbo.UserStateMapping usm
+        ON a.AgencyID = usm.AgencyID
+           AND usm.State = a.State
+           AND a.UserID <> usm.UserID;
+
+ROLLBACK;
+
+
+SQL JOB RUNS HOURLY TO MOVE NEW FA(BMS AGENT) to those.
+
+https://portal.azure.com/#@covrtech.com/resource/subscriptions/49838a58-7bb7-46c5-90fc-bcf791fe97c3/resourceGroups/CovrMainProdRg/providers/Microsoft.Automation/automationAccounts/CovrProdAutoAcc/runbooks/territory_agent_update/overview
+
+
+
+$AzureSQLServerName = "covr-prod-wus" 
+$AzureSQLDatabaseName = "bms" 
+
+$AzureSQLServerName = $AzureSQLServerName + ".database.windows.net" 
+$Cred = Get-AutomationPSCredential -Name "dbcc_sql_user" 
+$SQLOutput = $(Invoke-Sqlcmd -ServerInstance $AzureSQLServerName -Username $Cred.UserName -Password $Cred.GetNetworkCredential().Password -Database $AzureSQLDatabaseName -Query "UPDATE dbo.Agent
+SET UserID = usm.UserID
+FROM dbo.Agent a
+    JOIN dbo.UserStateMapping usm
+        ON a.AgencyID = usm.AgencyID
+           AND usm.State = a.State
+           AND a.UserID <> usm.UserID;" -QueryTimeout 65535 -ConnectionTimeout 60 -Verbose) 4>&1 
+
+Write-Output $SQLOutput
+
+
+
+
+
+Code Uploaded to git under https://gitlab.com/covrtech/covrdataexchange/-/tree/main/bms/territory_mapping
+
+
+
+Greg Wellbrock 
+Head of Data Engineering 
+T: 208-350-7064 
+
+E: greg.wellbrock@covrtech.com 
+
+
+
+Follow Covr on LinkedIn 
+
+ 
+
+

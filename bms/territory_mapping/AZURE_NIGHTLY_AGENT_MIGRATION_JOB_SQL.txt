@@ -1,0 +1,12 @@
+
+BEGIN TRAN;
+UPDATE dbo.Agent
+SET UserID = usm.UserID
+FROM dbo.Agent a
+    JOIN dbo.UserStateMapping usm
+        ON a.AgencyID = usm.AgencyID
+           AND usm.State = a.State
+           AND a.UserID <> usm.UserID;
+
+ROLLBACK;
+

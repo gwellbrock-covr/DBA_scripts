@@ -1,0 +1,63 @@
+
+/*
+
+	
+	  523	peter.osborn
+	  46	jason.preszler
+
+*/
+
+--select * from dbo.[user] where username like '%tom%'
+DECLARE @OLDUSER INT = 545;
+DECLARE @NEWUSER INT = 393;
+--craig 393
+--update state mapping
+
+
+
+--move pending cases
+UPDATE dbo.[Case]
+SET RepUserID = a.UserID
+FROM dbo.[Case] c
+    INNER JOIN dbo.Agent a
+        ON a.AgentID = c.AgentID
+    INNER JOIN dbo.CaseStatus cs
+        ON cs.CaseStatusID = c.CaseStatusID
+WHERE a.UserID = @NEWUSER
+      AND c.RepUserID <> @NEWUSER
+      AND cs.StatusCategory IN ( 'Pending' );
+
+
+
+
+--move pending conciergecases
+UPDATE dbo.ConciergeCase
+SET AssignedUserID = a.UserID
+FROM dbo.ConciergeCase c
+    INNER JOIN dbo.Agent a
+        ON a.AgentID = c.AgentID
+    INNER JOIN dbo.ConciergeCaseStatus cs
+        ON cs.ConciergeCaseStatusID = c.ConciergeCaseStatusID
+WHERE a.UserID = @NEWUSER
+      AND c.AssignedUserID <> @NEWUSER
+      AND cs.ConciergeCaseStatusCategory IN ( 'Pending' );
+
+
+
+
+
+UPDATE dbo.OneClickRequest
+SET AssignedToUserID = @NEWUSER,
+    AgentRepID = @NEWUSER,
+    AgentRepFirstName = u.FirstName,
+    AgentRepLastName = u.LastName
+FROM dbo.OneClickRequest c
+    INNER JOIN dbo.Agent a
+        ON a.AgentID = c.AgentID
+    INNER JOIN dbo.[User] u
+        ON u.UserID = @NEWUSER
+WHERE a.UserID = @NEWUSER
+      AND OneClickRequestStatusID IN ( 1, 2, 3 );
+
+
+

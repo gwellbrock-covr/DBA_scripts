@@ -1,0 +1,80 @@
+
+
+create or replace procedure citi_agent_summary_covr_unload_sp()
+  returns string not null
+  language javascript
+  as
+  $$       
+  
+    //declare report_name
+    var report_name = "citi_agent_summary"
+    
+    //declare query
+    var query = "SELECT * FROM COVR_ANALYTICS.PRODUCTION.CITI_YTD_AGENT_SUMMARY"
+    
+    // Get Current Date
+    var date_now = new Date()
+    
+    // Get Year as YYYY
+    var full_year = date_now.getFullYear()
+    
+    // Get Month and add one because month is a zero-based value in java script (where zero indicates the first month of the year).
+    var full_month = date_now.getMonth() + 1
+    
+    // Convert number to string and pad zero if it is a single digit
+    var full_month = String(full_month).padStart(2, '0')
+    
+    // Get date
+    var full_day = date_now.getDate()
+        
+    // Convert number to string and pad zero if it is a single digit
+    var full_day = String(full_day).padStart(2, '0')
+    
+    //date now
+    var timestamp = Date.now()
+    
+    // Declare a empty variable
+    var covr_data_copy = ""
+	
+	    
+    // Construct the copy statement
+    var covr_data_copy = covr_data_copy.concat("COPY INTO @s3_covr_aws_integration/data_extracts/",report_name,"/", full_year, "/", full_month, "/", full_day, "/",report_name,"_",timestamp , ".csv FROM (",query,")FILE_FORMAT = ( TYPE = CSV null_if=() COMPRESSION = None) OVERWRITE = TRUE SINGLE = TRUE HEADER = FALSE;");
+    
+      console.log(covr_data_copy);
+    
+    try {
+        
+      
+        
+        // Create snowflake statement using above copy statement
+        var copy_statement = snowflake.createStatement( {sqlText: covr_data_copy} );
+
+        // Execute the above copy statement
+        var result_set = copy_statement.execute();  
+        
+   
+
+        // Statement returned for info and debuging purposes
+        return "Succeeded: " + covr_data_copy; 
+    }
+    catch (err)  {
+    
+        // Return error message
+        return "Failed: " + err;
+    }
+
+  $$;
+  
+  call citi_wge_summary_covr_unload_sp();
+  
+  
+  
+  CREATE OR REPLACE TASK send_citi_agent_summary_data
+  WAREHOUSE = task_wh  
+  SCHEDULE  = 'USING CRON 0 8 * * * UTC'
+
+AS
+  call citi_agent_summary_covr_unload_sp();
+  
+
+  alter task send_citi_agent_summary_data resume;

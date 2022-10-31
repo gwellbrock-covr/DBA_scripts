@@ -1,0 +1,27 @@
+
+INSERT INTO dbo.UserStateMapping
+(
+    AgencyID,
+    UserID,
+    State
+)
+SELECT ctm.AGENCYID,
+       u.UserID,
+       b.value
+FROM dbo.[User] u
+    JOIN dbo.COVR_TERRITORY_MAPPING ctm
+        ON ctm.USERNAME = UPPER(u.FirstName) + ' ' + UPPER(u.LastName)
+    CROSS APPLY STRING_SPLIT(STATES, ',') b;
+	
+	
+	
+BEGIN TRAN;
+UPDATE dbo.Agent
+SET UserID = usm.UserID
+FROM dbo.Agent a
+    JOIN dbo.UserStateMapping usm
+        ON a.AgencyID = usm.AgencyID
+           AND usm.State = a.State
+           AND a.UserID <> usm.UserID;
+
+ROLLBACK;

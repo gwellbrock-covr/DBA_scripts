@@ -1,0 +1,60 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+
+Description: load s3 data to dynamo
+
+
+
+Resources:
+  loadJsonToDynamo:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: src/app.lambda_handler
+      Runtime: python3.8
+      Layers:
+        - arn:aws:lambda:us-west-2:067436737444:layer:exchangePythonLayer:1
+      CodeUri: .
+      Description: load s3 data to dynamo
+      MemorySize: 128
+      Timeout: 30
+      Environment:
+        Variables:
+          POWERTOOLS_SERVICE_NAME: loadDynamo
+          TABLE_NAME:
+            Fn::ImportValue: exchangetable
+          BUCKET_NAME: 
+            Fn::ImportValue: exchangebucket
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - 's3:GetObject'
+              Resource: 'arn:aws:s3:::*'
+            - Effect: Allow
+              Action:
+                - 'dynamodb:GetItem'
+                - 'dynamodb:PutItem'
+                - 'dynamodb:Scan'
+                - 'dynamodb:UpdateItem'
+              Resource:
+                'Fn::Join':
+                  - ''
+                  - - 'arn:aws:dynamodb:'
+                    - Ref: 'AWS::Region'
+                    - ':'
+                    - Ref: 'AWS::AccountId'
+                    - ':table/'
+                    - Fn::ImportValue: exchangetable
+      Events:
+        S3EventBridgeRule:
+          Type: EventBridgeRule
+          Properties:
+            Pattern:
+              source:
+                - aws.s3
+              detail:
+                bucket:
+                  name:
+                    - Fn::ImportValue: exchangebucket
+                    #Hardcoded need to figure out export/import of dynamoDB table

@@ -1,0 +1,126 @@
+
+create or replace storage integration s3_covr_aws_case_stream_integration
+  type = external_stage
+  storage_provider = s3
+  enabled = true
+  storage_aws_role_arn = 'arn:aws:iam::067436737444:role/snowflake_case_stream_role'
+  storage_allowed_locations = ('s3://exchange-data-prod/')
+  
+  describe integration s3_covr_aws_case_stream_integration
+
+
+CREATE or replace FILE FORMAT my_json_format_no_compression TYPE = 'JSON' ENABLE_OCTAL = FALSE ALLOW_DUPLICATE = FALSE STRIP_OUTER_ARRAY = FALSE STRIP_NULL_VALUES = FALSE IGNORE_UTF8_ERRORS = FALSE COMPRESSION = NONE;
+
+
+
+
+create or replace stage s3_covr_aws_case_stage
+  url='s3://exchange-data-prod/'
+  storage_integration = s3_covr_aws_case_stream_integration
+  file_format = MY_JSON_FORMAT_NO_COMPRESSION
+  ;
+  
+  
+Create or Replace Stream case_stream on table datamart_case
+  
+  
+  --Put it Into a Stored Procedure
+CREATE OR REPLACE PROCEDURE SP_UNLOAD_CASE_DYNAMIC()
+    RETURNS STRING
+    LANGUAGE JAVASCRIPT
+    EXECUTE AS CALLER
+    AS
+    $$
+    //Unload JSON to Stage
+    //COPY INTO OBJECT CONSTRUCT(*)
+    //With Dynamic Pathing with JS MS TS for different unload naming convention
+    //Copy into does not load file with same name but different timestamps
+     
+    //Result Place Holder
+    var result="";
+     
+    //Build SQL
+    var dynamicpath = Date.now().toString();
+     
+    var sql00 = `copy into @s3_covr_aws_case_stage/journey_export/` + dynamicpath + `/ from  (
+ 
+SELECT
+	OBJECT_CONSTRUCT('pk',
+	pk,
+	'sk',
+	sk,
+	'journeyId',
+	journeyid,
+	'bms_agency_id',
+	bms_agency_id,
+	'agencyname',
+	agencyname,
+    'channel',
+    channel,
+	'casestatus',
+	current_case_status,
+	'carrier_name',
+	carrier_name,
+	'combined_status',
+	status_object,
+	'updated_epoch_at',
+	EXTRACT(epoch_seconds,
+	current_timestamp()))
+FROM
+	case_stream
+WHERE
+	current_case_status IS NOT NULL
+	AND carrier_name IS NOT NULL
+	AND statusupdatedate IS NOT NULL
+	AND pk IS NOT NULL
+	AND sk IS NOT NULL
+	AND bms_agency_id IS NOT NULL
+	AND status_object IS NOT NULL
+    and channel is not null
+
+            
+    )
+       File_format = (format_name='MY_JSON_FORMAT_NO_COMPRESSION')  max_file_size=1024 overwrite=true;`;
+     
+    var sql01 = `select count(*) from @s3_covr_aws_case_stage/journey_export/` + dynamicpath + `/ (file_format => MY_JSON_FORMAT_NO_COMPRESSION);`;
+ 
+    //Execute SQL
+    try {
+        var stmt00 = snowflake.createStatement( { sqlText: sql00 } );
+        stmt00.execute();
+         
+        var stmt01 = snowflake.createStatement( { sqlText: sql01 } );
+        var rs01 = stmt01.execute();
+        rs01.next();
+        var rowCount = (stmt01.getRowCount()>0) ? rs01.getColumnValue(1) : 0;
+          
+        result = "Succeeded! Rows Unloaded(" + rowCount + ")";
+    }
+     
+    catch (err)  {
+        result =  "Failed: Code: " + err.code + "\n  State: " + err.state;
+        result += "\n  Message: " + err.message;
+        result += "\nStack Trace:\n" + err.stackTraceTxt; 
+    }
+     
+    return result;
+    $$;
+    
+    
+
+    
+    --Call SP
+CALL SP_UNLOAD_CASE_DYNAMIC();
+
+  
+  CREATE OR REPLACE TASK execute_case_drop
+  WAREHOUSE = compute_wh  
+  SCHEDULE  = 'USING CRON 0 * * * * UTC'
+
+AS
+  call SP_UNLOAD_CASE_DYNAMIC();
+  
+
+  alter task execute_case_drop resume;
+
+
